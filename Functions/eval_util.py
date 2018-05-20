@@ -21,13 +21,18 @@ from sklearn.metrics import classification_report
 # Error Handling
 # =============================================================================
 # Error caluclation
-def mse(vector_1, vector_2):
-    vector_1 = np.array(vector_1)
-    vector_2 = np.array(vector_2)
+def mse(y_vector, p_vector, derivative=False):
+    y_vector = np.array(y_vector)
+    p_vector = np.array(p_vector)
     
+    # Derivative wrt p_vector
+    if derivative:
+        derivative = (p_vector - y_vector)*2
+        return derivative
     # MSE
-    mse_value = np.sum((vector_2 - vector_1)**2)
-    return mse_value
+    else:
+        mse_value = np.sum((y_vector - p_vector)**2) / float(p_vector.size)
+        return mse_value
 
 # Plot errors
 def plot_error_changes(errors):

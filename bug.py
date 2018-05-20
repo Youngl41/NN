@@ -25,7 +25,7 @@ sys.path.append(nn_class_dir)
 from nn import nn
 from eval_util import mse
 from munge_util import binarize_labels
-from nn_functions import sigmoid
+from nn_functions import logistic
 from nn_functions import softmax
 
 # Import parallelisation modules
@@ -61,17 +61,19 @@ bin_test_y = test_y
 
 if __name__ == '__main__':
     # Initialise
-    nnet = nn(layers = [2,4,1], random_seed = 12)
+    nnet = nn(layers = [2,4,1], 
+              sigmoids = [logistic, logistic], 
+              random_seed = 12)
     
     # Train
-    nn_params = {'learning_rate': 10,
+    nn_params = {'learning_rate': 1,
                  'influence_of_inertia': 0.1,
                  'size_minibatch': 2400, 
-                 'epochs': 1,
+                 'epochs': 2000,
                  'error_func': mse,
                  'verbose': True}
-    nnet.debug_fit(x=train_x, y=bin_train_y, **nn_params)
-    nnet.b
+    nnet.fit(x=train_x, y=bin_train_y, **nn_params)
+    
     # Validate
 #    np.round(nnet.predict(x=test_x),2)
     nnet.validate(x=test_x, y=bin_test_y, verbose=True)
@@ -90,3 +92,7 @@ true_classes = np.argmax(np.array(bin_test_y),1)
 plot_conf_mat(true_classes, pred_classes, figsize=(5,5))
 
 
+
+pd.DataFrame(true_classes == pred_classes)
+preds = nnet.predict(x=test_x)
+y = bin_test_y

@@ -25,7 +25,7 @@ sys.path.append(nn_class_dir)
 from nn import nn
 from eval_util import mse
 from munge_util import binarize_labels
-from nn_functions import sigmoid
+from nn_functions import logistic
 from nn_functions import softmax
 
 # Import parallelisation modules
@@ -43,40 +43,32 @@ data.columns = iris.feature_names
 labels = pd.DataFrame(iris.target)
 labels.columns = ['labels']
 
-data, labels = datasets.make_moons(4000, noise=0.1)
-data = pd.DataFrame(data)
-labels = pd.DataFrame(labels)
-
-plt.scatter(train_x.iloc[:,0], train_x.iloc[:,1], c=list(map(lambda x: ['red', 'blue'][int(x)], np.array(train_y))))
-
-
 # Normalise data
 normalised_data = (data - np.mean(data))/np.std(np.array(data),0)
 
 # Split data
 train_x,test_x,train_y,test_y = train_test_split(normalised_data, labels, train_size = 0.6, test_size = 0.4, random_state=1)
-bin_train_y = train_y
-bin_test_y = test_y
-
 bin_train_y = binarize_labels(train_y)
 bin_test_y = binarize_labels(test_y)
 
 if __name__ == '__main__':
     # Initialise
-    nnet = nn(layers = [2,30,1], random_seed = 12)
+    nnet = nn(layers = [4,10,3], 
+              sigmoids = [logistic, softmax], 
+              random_seed = 12)
     
     # Train
     nn_params = {'learning_rate': 1,
                  'influence_of_inertia': 0.1,
-                 'size_minibatch': 2400, 
-                 'epochs': 10,
+                 'size_minibatch': 90, 
+                 'epochs': 1000,
                  'error_func': mse,
                  'verbose': True}
     nnet.fit(x=train_x, y=bin_train_y, **nn_params)
     
     # Validate
 #    np.round(nnet.predict(x=test_x),2)
-    nnet.validate(x=test_x, y=bin_test_y, verbose=False)
+    nnet.validate(x=test_x, y=bin_test_y, verbose=True)
 
 # Save
 nn_save_dir = '/Users/Young/Documents/Capgemini/Learning/Machine Learning/NN/Models'

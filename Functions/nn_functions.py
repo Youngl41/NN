@@ -22,8 +22,8 @@ from eval_util import mse
 # =============================================================================
 # nn_functions
 # =============================================================================
-# Sigmoid function
-def sigmoid(x, derivative=False):
+# Logistic function
+def logistic(x, derivative=False):
     if derivative:
         return np.exp(x)/(1+np.exp(x))**2
     else:
@@ -38,7 +38,7 @@ def softmax(vector, derivative=False):
         return s
     
 # Activation function
-def neuron_activation(w, b, a, activation_function = sigmoid):
+def neuron_activation(w, b, a, activation_function = logistic):
     '''
     w   := weights of previous neurons
     b   := bias
@@ -68,7 +68,8 @@ def neuron_activation(w, b, a, activation_function = sigmoid):
     else:
         return z
 
-def back_propagate(x_value, y_value, w, b, layers, error_func = mse):
+# Forward propagation
+def forward_propagate(x_value, w, b, layers, sigmoids):
     # Fire neurons
     a = []
     z = []
@@ -78,16 +79,20 @@ def back_propagate(x_value, y_value, w, b, layers, error_func = mse):
         # First layer
         if layer_idx == 0:
             z_layer = neuron_activation(w_layer, b_layer, np.array(x_value), activation_function = None)
-            a_layer = neuron_activation(w_layer, b_layer, np.array(x_value), activation_function = sigmoid)
-        # Final layer
-        elif layer_idx == len(layers)-2:
-            z_layer = neuron_activation(w_layer, b_layer, a[layer_idx-1], activation_function = None)
-            a_layer = neuron_activation(w_layer, b_layer, a[layer_idx-1], activation_function = softmax)
+            a_layer = neuron_activation(w_layer, b_layer, np.array(x_value), activation_function = sigmoids[layer_idx])
+        # Other layers
         else:
             z_layer = neuron_activation(w_layer, b_layer, a[layer_idx-1], activation_function = None)
-            a_layer = neuron_activation(w_layer, b_layer, a[layer_idx-1], activation_function = sigmoid)
+            a_layer = neuron_activation(w_layer, b_layer, a[layer_idx-1], activation_function = sigmoids[layer_idx])
         z.append(z_layer)
         a.append(a_layer)
+        
+    return a,z
+
+# Backward propagation
+def back_propagate(x_value, y_value, w, b, layers, sigmoids, error_func = mse):
+    # Forward propagation
+    a, z = forward_propagate(x_value, w, b, layers, sigmoids)
     
     # Error
     error = error_func(a[-1], np.array(y_value))
@@ -105,8 +110,8 @@ def back_propagate(x_value, y_value, w, b, layers, error_func = mse):
         
         # Final layer
         if layer_idx == len(layers)-2:
-            deriv_a_by_z = softmax(z[layer_idx], derivative=True)#sigmoid(z[layer_idx], derivative=True)
-            deriv_c_by_a = 2 * (a[layer_idx] - y_temp)
+            deriv_a_by_z = sigmoids[layer_idx](z[layer_idx], derivative=True)#logistic(z[layer_idx], derivative=True)
+            deriv_c_by_a = error_func(y_temp, a[layer_idx], derivative=True)#2 * (a[layer_idx] - y_temp)
             
             grad_final_layer_w = np.outer(deriv_z_by_w, deriv_a_by_z * deriv_c_by_a).transpose()
             grad_final_layer_b = deriv_a_by_z * deriv_c_by_a
@@ -116,8 +121,8 @@ def back_propagate(x_value, y_value, w, b, layers, error_func = mse):
         
         # Iterate through lower layers
         else:
-            deriv_a_by_z = sigmoid(z[layer_idx], derivative=True)
-            deriv_c_by_a = np.matmul(deriv_c_by_a * sigmoid(z[layer_idx + 1], derivative=True), w[layer_idx + 1])
+            deriv_a_by_z = sigmoids[layer_idx](z[layer_idx], derivative=True)
+            deriv_c_by_a = np.matmul(deriv_c_by_a * sigmoids[layer_idx](z[layer_idx + 1], derivative=True), w[layer_idx + 1])
             
             grad_layer_w = np.outer(deriv_z_by_w, deriv_a_by_z * deriv_c_by_a).transpose()
             grad_layer_b = deriv_a_by_z * deriv_c_by_a
@@ -128,34 +133,56 @@ def back_propagate(x_value, y_value, w, b, layers, error_func = mse):
     # Reverse list
     grad_w = list(reversed(grad_w))
     grad_b = list(reversed(grad_b))
+#    # Error
+#    error = error_func(a[-1], np.array(y_value))
+#    
+#    # Backpropagation
+#    grad_w = []
+#    grad_b = []
+#    y_temp = np.array(y_value)
+#    for layer_idx in reversed(range(len(layers)-1)):
+#        # Check first layer input neurons
+#        if layer_idx == 0:
+#            deriv_z_by_w = np.array(x_value)
+#        else:
+#            deriv_z_by_w = a[layer_idx-1]
+#        
+#        # Final layer
+#        if layer_idx == len(layers)-2:
+#            deriv_a_by_z = softmax(z[layer_idx], derivative=True)#logistic(z[layer_idx], derivative=True)
+#            deriv_c_by_a = 2 * (a[layer_idx] - y_temp)
+#            
+#            grad_final_layer_w = np.outer(deriv_z_by_w, deriv_a_by_z * deriv_c_by_a).transpose()
+#            grad_final_layer_b = deriv_a_by_z * deriv_c_by_a
+#    
+#            grad_w.append(grad_final_layer_w)
+#            grad_b.append(grad_final_layer_b)
+#        
+#        # Iterate through lower layers
+#        else:
+#            deriv_a_by_z = logistic(z[layer_idx], derivative=True)
+#            deriv_c_by_a = np.matmul(deriv_c_by_a * logistic(z[layer_idx + 1], derivative=True), w[layer_idx + 1])
+#            
+#            grad_layer_w = np.outer(deriv_z_by_w, deriv_a_by_z * deriv_c_by_a).transpose()
+#            grad_layer_b = deriv_a_by_z * deriv_c_by_a
+#    
+#            grad_w.append(grad_layer_w)
+#            grad_b.append(grad_layer_b)
+#            
+#    # Reverse list
+#    grad_w = list(reversed(grad_w))
+#    grad_b = list(reversed(grad_b))
 
     return grad_w, grad_b, error
 
-def predict(x_value, w, b, layers, y_value = None):
-    # Fire neurons
-    a = []
-    z = []
-    for layer_idx in range(len(layers)-1):
-        w_layer = w[layer_idx]
-        b_layer = b[layer_idx]
-        # First layer
-        if layer_idx == 0:
-            z_layer = neuron_activation(w_layer, b_layer, np.array(x_value), activation_function = None)
-            a_layer = neuron_activation(w_layer, b_layer, np.array(x_value), activation_function = sigmoid)
-        # Final layer
-        elif layer_idx == len(layers)-2:
-            z_layer = neuron_activation(w_layer, b_layer, a[layer_idx-1], activation_function = None)
-            a_layer = neuron_activation(w_layer, b_layer, a[layer_idx-1], activation_function = softmax)
-        else:
-            z_layer = neuron_activation(w_layer, b_layer, a[layer_idx-1], activation_function = None)
-            a_layer = neuron_activation(w_layer, b_layer, a[layer_idx-1], activation_function = sigmoid)
-        z.append(z_layer)
-        a.append(a_layer)
+def predict(x_value, w, b, layers, sigmoids, error_func = None, y_value = None):    
+    # Forward propagation
+    a, _ = forward_propagate(x_value, w, b, layers, sigmoids)
     
     # Error
     prediction = a[-1]
     try:
-        error = mse(prediction, np.array(y_value))
+        error = error_func(prediction, np.array(y_value))
         return prediction, error
     except TypeError:
         return prediction
