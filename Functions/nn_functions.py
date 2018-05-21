@@ -133,47 +133,18 @@ def back_propagate(x_value, y_value, w, b, layers, sigmoids, error_func = mse):
     # Reverse list
     grad_w = list(reversed(grad_w))
     grad_b = list(reversed(grad_b))
-#    # Error
-#    error = error_func(a[-1], np.array(y_value))
-#    
-#    # Backpropagation
-#    grad_w = []
-#    grad_b = []
-#    y_temp = np.array(y_value)
-#    for layer_idx in reversed(range(len(layers)-1)):
-#        # Check first layer input neurons
-#        if layer_idx == 0:
-#            deriv_z_by_w = np.array(x_value)
-#        else:
-#            deriv_z_by_w = a[layer_idx-1]
-#        
-#        # Final layer
-#        if layer_idx == len(layers)-2:
-#            deriv_a_by_z = softmax(z[layer_idx], derivative=True)#logistic(z[layer_idx], derivative=True)
-#            deriv_c_by_a = 2 * (a[layer_idx] - y_temp)
-#            
-#            grad_final_layer_w = np.outer(deriv_z_by_w, deriv_a_by_z * deriv_c_by_a).transpose()
-#            grad_final_layer_b = deriv_a_by_z * deriv_c_by_a
-#    
-#            grad_w.append(grad_final_layer_w)
-#            grad_b.append(grad_final_layer_b)
-#        
-#        # Iterate through lower layers
-#        else:
-#            deriv_a_by_z = logistic(z[layer_idx], derivative=True)
-#            deriv_c_by_a = np.matmul(deriv_c_by_a * logistic(z[layer_idx + 1], derivative=True), w[layer_idx + 1])
-#            
-#            grad_layer_w = np.outer(deriv_z_by_w, deriv_a_by_z * deriv_c_by_a).transpose()
-#            grad_layer_b = deriv_a_by_z * deriv_c_by_a
-#    
-#            grad_w.append(grad_layer_w)
-#            grad_b.append(grad_layer_b)
-#            
-#    # Reverse list
-#    grad_w = list(reversed(grad_w))
-#    grad_b = list(reversed(grad_b))
-
+    
     return grad_w, grad_b, error
+
+# Chunked back propagation
+def chunked_back_propagate(minibatch, x, y, w, b, layers, sigmoids, error_func = mse):
+    return list(map(lambda train_idx: back_propagate(x_value = x.iloc[train_idx],
+                                                   y_value = y.iloc[train_idx],
+                                                   w = w,
+                                                   b = b,
+                                                   layers = layers,
+                                                   sigmoids=sigmoids,
+                                                   error_func=error_func), minibatch))
 
 def predict(x_value, w, b, layers, sigmoids, error_func = None, y_value = None):    
     # Forward propagation

@@ -28,11 +28,14 @@ from eval_util import mse
 from eval_util import plot_conf_mat
 from eval_util import plot_error_changes
 from munge_util import binarize_labels
+from parallel_util import chunk_list
+from parallel_util import get_num_cores
 from nn_functions import logistic
 from nn_functions import softmax
 from nn_functions import neuron_activation
 from nn_functions import predict
 from nn_functions import back_propagate
+from nn_functions import chunked_back_propagate
 
 # Import parallelisation modules
 import multiprocessing
@@ -119,26 +122,33 @@ class nn():
         avg_errors = []
         if not size_minibatch:
             size_minibatch = len(x)
-        for i in range(epochs):
-            # Backpropagation
-            grad_ws = []
-            grad_bs = []
-            errors = []
-            size_minibatch / n_jobs_data_parallelisation
-            minibatch = random.sample(range(len(x)), size_minibatch)
-            n_jobs_data_parallelisation
-            for train_idx in minibatch:
-                grad_w, grad_b, error = back_propagate(x_value = x.iloc[train_idx],
-                                               y_value = y.iloc[train_idx],
-                                               w = self.w,
-                                               b = self.b,
-                                               layers = self.layers,
-                                               sigmoids=self.sigmoids,
-                                               error_func=error_func)
             
-                grad_ws.append(grad_w)
-                grad_bs.append(grad_b)
-                errors.append(error)
+        # Train
+        for i in range(epochs):
+            minibatch = random.sample(range(len(x)), size_minibatch)
+            # Backpropagation
+            if n_jobs_data_parallelisation == 1:
+                results = list(map(lambda train_idx: back_propagate(x_value = x.iloc[train_idx],
+                                                   y_value = y.iloc[train_idx],
+                                                   w = self.w,
+                                                   b = self.b,
+                                                   layers = self.layers,
+                                                   sigmoids=self.sigmoids,
+                                                   error_func=error_func), minibatch))
+                grad_ws, grad_bs, errors = list(map(lambda x: x[0], results)), list(map(lambda x: x[1], results)), list(map(lambda x: x[2], results))
+
+            elif n_jobs_data_parallelisation > 1:
+                minibatch_chunks = chunk_list(minibatch, n_jobs_data_parallelisation)
+                results = Parallel(verbose = 0, n_jobs = n_jobs_data_parallelisation)(delayed(chunked_back_propagate)(minibatch_chunk, x = x,
+                                                   y = y,
+                                                   w = self.w,
+                                                   b = self.b,
+                                                   layers = self.layers,
+                                                   sigmoids=self.sigmoids,
+                                                   error_func=error_func) for minibatch_chunk in minibatch_chunks)
+                # Flatten
+                results = [item for sublist in results for item in sublist]
+                grad_ws, grad_bs, errors = list(map(lambda x: x[0], results)), list(map(lambda x: x[1], results)), list(map(lambda x: x[2], results))
         
             # Average grad w
             grad_avg_w = []
@@ -222,7 +232,6 @@ class nn():
                 pred_classes = np.argmax(preds,1)
                 true_classes = np.argmax(np.array(y),1)
             plot_conf_mat(true_classes, pred_classes, figsize=(5,5))
-        
         
 
 ## =============================================================================
