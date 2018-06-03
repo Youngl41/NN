@@ -37,13 +37,7 @@ from joblib import Parallel, delayed
 # =============================================================================
 # Main
 # =============================================================================
-# Import some data to play with
-#iris = datasets.load_iris()
-#data = pd.DataFrame(iris.data)
-#data.columns = iris.feature_names
-#labels = pd.DataFrame(iris.target)
-#labels.columns = ['labels']
-
+# Create some data
 data, labels = datasets.make_moons(100000, noise=0.1)
 data = pd.DataFrame(data)
 labels = pd.DataFrame(labels)
@@ -74,13 +68,17 @@ if __name__ == '__main__':
                  'epochs': 10,
                  'error_func': mse,
                  'verbose': True,
-                 'n_jobs_data_parallelisation': 8}
+                 'n_jobs_data_parallelisation': ncores}
     nnet.fit(x=train_x, y=bin_train_y, **nn_params)
+    # 1:43.120026 train 8 cores
+    # 3:45.779959 train 1 core
+
+#    # Predict
+#    np.round(nnet.predict(x=test_x),2)
     
     # Validate
-#    np.round(nnet.predict(x=test_x),2)
     nnet.validate(x=test_x, y=bin_test_y, verbose=True)
-#
+
 ## Save
 #nn_save_dir = '/Users/Young/Documents/Capgemini/Learning/Machine Learning/NN/Models'
 #nn_save_name = 'nn_10k.pkl'
@@ -102,4 +100,15 @@ if __name__ == '__main__':
 #
 #
 #
-#14.45 +8.95 + 15.45 -15 - 17.5
+preds = np.round(nnet.predict(x=test_x),2)
+y = bin_test_y
+pred_classes = (np.array(preds) > 0.5) * 1
+true_classes = np.array(y)
+
+pred_classes
+true_classes
+
+
+confusion_matrix(true_classes, pred_classes)
+    
+print (classification_report(true_classes, pred_classes))

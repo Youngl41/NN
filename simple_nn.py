@@ -51,6 +51,7 @@ train_x,test_x,train_y,test_y = train_test_split(normalised_data, labels, train_
 bin_train_y = binarize_labels(train_y)
 bin_test_y = binarize_labels(test_y)
 
+
 if __name__ == '__main__':
     # Initialise
     nnet = nn(layers = [4,10,3], 
@@ -58,12 +59,15 @@ if __name__ == '__main__':
               random_seed = 12)
     
     # Train
+    ncores = get_num_cores()
     nn_params = {'learning_rate': 1,
                  'influence_of_inertia': 0.1,
                  'size_minibatch': 90, 
-                 'epochs': 1000,
+                 'epochs': 10,
                  'error_func': mse,
-                 'verbose': True}
+                 'verbose': True,
+                 'n_jobs_data_parallelisation': 1}
+
     nnet.fit(x=train_x, y=bin_train_y, **nn_params)
     
     # Validate
